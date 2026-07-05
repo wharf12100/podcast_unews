@@ -1211,9 +1211,9 @@ body {
 
     <!-- Gameplay Screen -->
     <div id="gameplayScreen" class="hidden w-full flex flex-col space-y-6 animate-fade-in" style="max-width:1050px">
-     
+      <div id="gameplayTopSticky">
       <!-- Stats Board -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-white/70 backdrop-blur-md p-4 rounded-2xl border border-[#DBC9B7]">
+      <div id="gameStatsBoard" class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-white/70 backdrop-blur-md p-4 rounded-2xl border border-[#DBC9B7]">
         <div id="fameCard" class="space-y-1.5 p-3 rounded-xl border border-transparent transition-all duration-300">
           <div class="flex justify-between items-center text-xs">
             <span class="text-[#8B6528] font-bold flex items-center gap-1"><i class="fa-solid fa-star text-yellow-500"></i> 知名度</span>
@@ -1253,7 +1253,7 @@ body {
       </div>
 
       <!-- Main Interaction Board -->
-      <div class="bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-[#DBC9B7] neon-border flex flex-col md:flex-row gap-6 items-center">
+      <div id="gameMainBoard" class="bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-[#DBC9B7] neon-border flex flex-col md:flex-row gap-6 items-center">
        
         <!-- Interactive Player Area -->
         <div class="w-full md:w-1/3 flex flex-col items-center justify-center p-4 bg-[#F5EDE4] rounded-2xl border border-[#E5D7C9] text-center relative overflow-visible">
@@ -1347,6 +1347,7 @@ body {
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       <!-- Decision Area -->
@@ -1880,13 +1881,20 @@ body {
       playSoundEffect('click');
       stopCurrentVoice();
       decisionSection.classList.remove('hidden');
+      gameplayScreen.classList.add('decision-mode');
 
-      // 不要自動把整個遊戲捲到上方，避免展開決策後頂部被截掉。
-      // 只通知父層重新計算iframe高度即可。
+      try {
+        gameplayScreen.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (e) {
+        gameplayScreen.scrollTop = 0;
+      }
+
+      // 展開選項後通知父層重新計算 iframe 高度。
       try {
         if (typeof notifyParent === 'function') {
           setTimeout(notifyParent, 80);
           setTimeout(notifyParent, 220);
+          setTimeout(notifyParent, 420);
         }
       } catch (e) {}
     });
@@ -2246,6 +2254,13 @@ body {
     function loadEpisode() {
       stopCurrentVoice();
       const episode = EPISODES[currentEpisodeIdx];
+
+      gameplayScreen.classList.remove('decision-mode');
+      try {
+        gameplayScreen.scrollTo({ top: 0, behavior: 'auto' });
+      } catch (e) {
+        gameplayScreen.scrollTop = 0;
+      }
      
       progressIndicator.innerText = `EP 0${episode.id} / 05`;
       episodeTitle.innerText = episode.title;
@@ -2294,10 +2309,9 @@ body {
     // 歷史遺留代碼修正
     function handleChoice(option) {
       stopCurrentVoice();
-     
-      currentFame += option.effects.fame;
-      currentEpisodeIdx === 0 ? currentResp += option.effects.resp : currentResp += option.effects.resp; // 保留原始計算脈絡
 
+      // v104：修正原本同一選項效果被計算兩次的問題。
+      // 現在每題只套用一次數值，避免玩家玩兩題就提前結束。
       currentFame    = Math.min(100, Math.max(0, currentFame + (option.effects.fame    || 0)));
       currentResp    = Math.min(100, Math.max(0, currentResp + (option.effects.resp    || 0)));
       currentIncome  = Math.min(100, Math.max(0, currentIncome + (option.effects.income  || 0)));
@@ -2730,6 +2744,1585 @@ main {
   }
   window.addEventListener('load', function(){ notifyParentAgain(); setTimeout(notifyParentAgain, 120); setTimeout(notifyParentAgain, 500); });
   document.addEventListener('click', function(){ setTimeout(notifyParentAgain, 60); setTimeout(notifyParentAgain, 220); }, true);
+})();
+</script>
+
+
+<style data-patch="tab-avatar-face-crops-v82">
+/* v82：深色觀點切換列的圓形頭像改用人臉裁切圖，確保顯示臉部。 */
+#section-4-2 .nick-sky-tab-thumb,
+#section-5-3 .impact-tab-avatar {
+  object-fit: cover !important;
+  object-position: center center !important;
+  border-radius: 50% !important;
+}
+</style>
+
+
+<style data-patch="v100-playability-safety-click-layer">
+/* v100：只補強按鈕點擊層級，不覆蓋原本遊戲流程。 */
+#goToRulesBtn,
+#startGameBtn,
+#confirmStartGameBtn,
+#backToStartBtn,
+#makeDecisionBtn {
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 9999 !important;
+}
+</style>
+<script data-patch="v100-survival-game-original-flow-safety">
+/* v100：保留原本遊戲程式碼，只在舊監聽未成功時補一次進入流程。 */
+(function(){
+  function $(id){ return document.getElementById(id); }
+  function postResize(){
+    try {
+      parent.postMessage({
+        type:'survival-game-size',
+        height: Math.max(900, document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0),
+        width: Math.max(980, document.documentElement.scrollWidth)
+      }, '*');
+    } catch(e) {}
+  }
+  function showRulesFallback(){
+    var start = $('startScreen');
+    var rules = $('rulesScreen');
+    if (!start || !rules) return;
+    setTimeout(function(){
+      if (!rules.classList.contains('hidden')) return;
+      var input = $('podcastNameInput');
+      var name = (input && input.value || '').trim() || '無名頻道';
+      var current = $('currentShowName');
+      if (current) current.textContent = '《' + name + '》';
+      try { window.podcastName = name; } catch(e) {}
+      start.classList.add('hidden');
+      rules.classList.remove('hidden');
+      document.body.classList.add('mic-cursor');
+      postResize();
+    }, 120);
+  }
+  function showGameFallback(){
+    var rules = $('rulesScreen');
+    var modal = $('reminderModal');
+    var game = $('gameplayScreen');
+    setTimeout(function(){
+      if (game && !game.classList.contains('hidden')) return;
+      if (modal) modal.classList.add('hidden');
+      if (rules) rules.classList.add('hidden');
+      if (game) game.classList.remove('hidden');
+      try { if (typeof loadEpisode === 'function') loadEpisode(); } catch(e) {}
+      postResize();
+    }, 160);
+  }
+  function bind(){
+    var startBtn = $('goToRulesBtn');
+    if (startBtn && startBtn.dataset.v100Safe !== '1') {
+      startBtn.dataset.v100Safe = '1';
+      startBtn.addEventListener('click', showRulesFallback, false);
+      startBtn.addEventListener('touchend', showRulesFallback, {passive:true});
+    }
+    var confirmBtn = $('confirmStartGameBtn');
+    if (confirmBtn && confirmBtn.dataset.v100Safe !== '1') {
+      confirmBtn.dataset.v100Safe = '1';
+      confirmBtn.addEventListener('click', showGameFallback, false);
+      confirmBtn.addEventListener('touchend', showGameFallback, {passive:true});
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind, {once:true});
+  else bind();
+  window.addEventListener('load', bind);
+})();
+</script>
+
+
+<style data-patch="v101-survival-game-full-frame-playable">
+/* v101：以可正常運作的原本遊戲程式碼為基礎，只調整版面。
+   目標：遊戲畫面填滿外框，灰底變成遊戲畫面；同時不擋按鈕、不破壞原本流程。 */
+html,
+body,
+.aspect-shell,
+.aspect-inner {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  overflow: hidden !important;
+}
+
+body.bg-grid-pattern,
+body {
+  margin: 0 !important;
+  padding: 0 !important;
+  background:
+    radial-gradient(ellipse 80% 64% at 50% 28%, rgba(255, 182, 206, 0.32) 0%, rgba(255, 228, 240, 0.16) 44%, transparent 68%),
+    #fff7fc !important;
+  display: flex !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+}
+
+.aspect-shell,
+.aspect-inner {
+  display: flex !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+}
+
+main {
+  width: 1080px !important;
+  max-width: 1080px !important;
+  min-width: 1080px !important;
+  height: 980px !important;
+  min-height: 980px !important;
+  max-height: 980px !important;
+  flex: 0 0 980px !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  display: flex !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+}
+
+/* 不直接設定 display，避免覆蓋 Tailwind 的 .hidden。 */
+#startScreen,
+#rulesScreen,
+#gameplayScreen,
+#endScreen,
+#reportContainer {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 100% !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  border-radius: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  background:
+    radial-gradient(ellipse 78% 62% at 50% 26%, rgba(255,182,206,0.23), transparent 66%),
+    #fff7fc !important;
+}
+
+/* 只有目前顯示中的頁面才改成 flex，避免 hidden 頁面被強制顯示。 */
+#startScreen:not(.hidden),
+#rulesScreen:not(.hidden),
+#endScreen:not(.hidden),
+#reportContainer:not(.hidden) {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+#gameplayScreen:not(.hidden) {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+}
+
+/* 起始頁：放大到近似使用者示意圖，同時保留完整可點擊區。 */
+#startScreen {
+  padding: 62px 92px 70px !important;
+  gap: 26px !important;
+}
+
+#startScreen.space-y-6 > :not([hidden]) ~ :not([hidden]),
+#rulesScreen.space-y-6 > :not([hidden]) ~ :not([hidden]),
+#gameplayScreen.space-y-6 > :not([hidden]) ~ :not([hidden]),
+#endScreen.space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0 !important;
+}
+
+#startScreen > :first-child {
+  width: 146px !important;
+  height: 146px !important;
+  min-width: 146px !important;
+  min-height: 146px !important;
+  margin: 0 auto 6px !important;
+  flex: 0 0 auto !important;
+}
+#startScreen > :first-child > :first-child {
+  inset: 0 !important;
+  filter: blur(22px) !important;
+}
+#startScreen > :first-child > :last-child {
+  width: 146px !important;
+  height: 146px !important;
+}
+#startScreen > :first-child i {
+  font-size: 3.25rem !important;
+}
+
+#startScreen > :nth-child(2) {
+  width: min(900px, 100%) !important;
+  max-width: 900px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  flex: 0 0 auto !important;
+}
+#startScreen > :nth-child(2) h2 {
+  font-size: clamp(3.35rem, 5.15vw, 4.45rem) !important;
+  line-height: 1.08 !important;
+  letter-spacing: 0.015em !important;
+  margin: 0 0 22px !important;
+}
+#startScreen > :nth-child(2) p {
+  max-width: 900px !important;
+  font-size: clamp(1.45rem, 2.15vw, 1.72rem) !important;
+  line-height: 1.9 !important;
+  letter-spacing: 0.025em !important;
+}
+
+#startScreen > :nth-child(3) {
+  width: min(760px, 100%) !important;
+  max-width: 760px !important;
+  margin: 0 auto !important;
+  padding: 24px 28px !important;
+  border-radius: 18px !important;
+  background: rgba(255, 247, 252, 0.72) !important;
+  flex: 0 0 auto !important;
+}
+#startScreen > :nth-child(3) label {
+  font-size: 1.18rem !important;
+  line-height: 1.55 !important;
+}
+#startScreen > :nth-child(3) label span,
+#startScreen > :nth-child(3) > p {
+  font-size: 0.9rem !important;
+  line-height: 1.55 !important;
+}
+#startScreen > :nth-child(3) input {
+  min-height: 66px !important;
+  padding: 16px 20px 16px 50px !important;
+  font-size: 1.08rem !important;
+  border-radius: 16px !important;
+}
+#startScreen > :nth-child(3) .absolute.inset-y-0.left-0 {
+  padding-left: 16px !important;
+  font-size: 1.25rem !important;
+}
+
+#goToRulesBtn {
+  width: min(620px, 100%) !important;
+  max-width: 620px !important;
+  min-height: 82px !important;
+  padding: 18px 28px !important;
+  margin: 2px auto 0 !important;
+  border-radius: 999px !important;
+  font-size: 2rem !important;
+  line-height: 1.1 !important;
+  letter-spacing: 0.13em !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 99999 !important;
+}
+
+/* 規則頁與遊玩頁：壓進同一個固定畫面，不使用滑鼠捲動也能操作。 */
+#rulesScreen {
+  padding: 36px 60px !important;
+  gap: 18px !important;
+}
+#rulesScreen > .space-y-2 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 8px !important;
+}
+#rulesScreen .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 10px !important;
+}
+#rulesScreen .grid.grid-cols-2 {
+  gap: 12px !important;
+}
+#rulesScreen .p-4 {
+  padding: 14px !important;
+}
+#rulesScreen h2 {
+  font-size: 1.75rem !important;
+}
+#rulesScreen h3,
+#rulesScreen h4 {
+  line-height: 1.35 !important;
+}
+#rulesScreen p {
+  line-height: 1.55 !important;
+}
+#rulesScreen #startGameBtn,
+#rulesScreen #backToStartBtn {
+  min-height: 56px !important;
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 99999 !important;
+}
+
+#gameplayScreen {
+  padding: 28px 42px !important;
+  gap: 14px !important;
+}
+#gameplayScreen > .grid.grid-cols-2.md\:grid-cols-4 {
+  padding: 12px !important;
+  gap: 10px !important;
+}
+#gameplayScreen > .grid.grid-cols-2.md\:grid-cols-4 > div {
+  padding: 10px !important;
+}
+#gameplayScreen > .bg-white\/80.backdrop-blur-md {
+  padding: 18px !important;
+  gap: 16px !important;
+}
+#gameplayScreen .w-full.md\:w-1\/3 {
+  padding: 12px !important;
+}
+#gameplayScreen .relative.w-40.h-36 {
+  transform: scale(0.92) !important;
+  transform-origin: center center !important;
+  margin-top: -4px !important;
+  margin-bottom: -4px !important;
+}
+#episodeTitle {
+  font-size: 1.35rem !important;
+  line-height: 1.35 !important;
+  margin-bottom: 8px !important;
+}
+#episodeDesc {
+  font-size: 0.98rem !important;
+  line-height: 1.55 !important;
+  margin-bottom: 10px !important;
+}
+#audioActionPanel {
+  padding: 12px !important;
+  gap: 10px !important;
+}
+#optionButtons {
+  gap: 10px !important;
+}
+#makeDecisionBtn {
+  min-height: 56px !important;
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 99999 !important;
+}
+
+#endScreen,
+#reportContainer {
+  padding: 34px 54px !important;
+}
+
+/* 提醒彈窗仍可正常點擊。 */
+#reminderModal {
+  z-index: 999998 !important;
+}
+#confirmStartGameBtn {
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 999999 !important;
+}
+
+/* 窄螢幕下保留完整呈現與可點擊。 */
+@media (max-width: 900px) {
+  main {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    min-height: 100% !important;
+    max-height: 100% !important;
+  }
+  #startScreen {
+    padding: 36px 28px 42px !important;
+    gap: 18px !important;
+  }
+  #startScreen > :first-child {
+    width: 116px !important;
+    height: 116px !important;
+    min-width: 116px !important;
+    min-height: 116px !important;
+  }
+  #startScreen > :first-child > :last-child {
+    width: 116px !important;
+    height: 116px !important;
+  }
+  #startScreen > :first-child i {
+    font-size: 2.75rem !important;
+  }
+  #startScreen > :nth-child(2) h2 {
+    font-size: clamp(2.45rem, 6vw, 3.2rem) !important;
+    margin-bottom: 12px !important;
+  }
+  #startScreen > :nth-child(2) p {
+    font-size: clamp(1rem, 2.6vw, 1.22rem) !important;
+    line-height: 1.75 !important;
+  }
+  #startScreen > :nth-child(3) {
+    width: min(100%, 650px) !important;
+    padding: 18px !important;
+  }
+  #startScreen > :nth-child(3) label {
+    font-size: 1rem !important;
+  }
+  #startScreen > :nth-child(3) input {
+    min-height: 56px !important;
+    font-size: 1rem !important;
+  }
+  #goToRulesBtn {
+    width: min(100%, 540px) !important;
+    min-height: 66px !important;
+    font-size: 1.55rem !important;
+  }
+  #rulesScreen,
+  #gameplayScreen,
+  #endScreen,
+  #reportContainer {
+    padding: 20px !important;
+  }
+}
+</style>
+<script data-patch="v101-survival-game-resize-notify">
+/* v101：每次切頁後通知外層重新計算尺寸；不改原本遊戲流程。 */
+(function(){
+  function notifyParent(){
+    try {
+      parent.postMessage({
+        type: 'survival-game-size',
+        height: 980,
+        width: 1080
+      }, '*');
+    } catch(e) {}
+  }
+  window.addEventListener('load', function(){
+    notifyParent();
+    setTimeout(notifyParent, 80);
+    setTimeout(notifyParent, 260);
+  });
+  document.addEventListener('click', function(){
+    setTimeout(notifyParent, 40);
+    setTimeout(notifyParent, 180);
+  }, true);
+})();
+</script>
+
+
+<style data-patch="v102-survival-layout-fit-options-clickable">
+/* v102：修正三件事：
+   1. 首頁「開始錄音」不再被底部裁切；
+   2. 錄製須知頁恢復正常比例；
+   3. 遊戲決策的三個選項完整顯示且都可點擊。 */
+
+/* 基本畫面仍然填滿外框，但內容不要被硬撐到裁切。 */
+main {
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+#startScreen,
+#rulesScreen,
+#gameplayScreen,
+#endScreen,
+#reportContainer {
+  overflow: hidden !important;
+}
+
+/* ---------- 第一頁：開始錄音 ---------- */
+#startScreen {
+  padding: 36px 84px 46px !important;
+  gap: 16px !important;
+  justify-content: center !important;
+}
+
+#startScreen > :first-child {
+  width: 118px !important;
+  height: 118px !important;
+  min-width: 118px !important;
+  min-height: 118px !important;
+  margin: 0 auto 2px !important;
+}
+
+#startScreen > :first-child > :last-child {
+  width: 118px !important;
+  height: 118px !important;
+}
+
+#startScreen > :first-child i {
+  font-size: 2.72rem !important;
+}
+
+#startScreen > :nth-child(2) {
+  width: min(900px, 100%) !important;
+  max-width: 900px !important;
+}
+
+#startScreen > :nth-child(2) h2 {
+  font-size: clamp(3.05rem, 4.6vw, 4rem) !important;
+  line-height: 1.08 !important;
+  margin: 0 0 12px !important;
+}
+
+#startScreen > :nth-child(2) p {
+  font-size: clamp(1.22rem, 1.86vw, 1.5rem) !important;
+  line-height: 1.68 !important;
+  letter-spacing: 0.02em !important;
+}
+
+#startScreen > :nth-child(3) {
+  width: min(720px, 100%) !important;
+  max-width: 720px !important;
+  padding: 18px 24px !important;
+  margin: 0 auto !important;
+  border-radius: 18px !important;
+}
+
+#startScreen > :nth-child(3) label {
+  font-size: 1.06rem !important;
+  line-height: 1.45 !important;
+}
+
+#startScreen > :nth-child(3) label span,
+#startScreen > :nth-child(3) > p {
+  font-size: 0.82rem !important;
+  line-height: 1.45 !important;
+}
+
+#startScreen > :nth-child(3) input {
+  min-height: 58px !important;
+  padding-top: 13px !important;
+  padding-bottom: 13px !important;
+  padding-left: 48px !important;
+  font-size: 1rem !important;
+}
+
+#goToRulesBtn {
+  width: min(560px, 100%) !important;
+  max-width: 560px !important;
+  min-height: 66px !important;
+  padding: 12px 24px !important;
+  margin-top: 0 !important;
+  font-size: 1.72rem !important;
+  line-height: 1.1 !important;
+  border-radius: 999px !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 100000 !important;
+}
+
+/* ---------- 第二頁：錄製須知 ---------- */
+#rulesScreen {
+  padding: 44px 78px 50px !important;
+  gap: 18px !important;
+  justify-content: center !important;
+}
+
+#rulesScreen > .w-16.h-16 {
+  width: 82px !important;
+  height: 82px !important;
+  min-width: 82px !important;
+  min-height: 82px !important;
+  font-size: 2rem !important;
+}
+
+#rulesScreen h2 {
+  font-size: clamp(2.15rem, 3.2vw, 2.8rem) !important;
+  line-height: 1.18 !important;
+  margin-bottom: 6px !important;
+}
+
+#rulesScreen > .space-y-2 p {
+  font-size: 1.05rem !important;
+  line-height: 1.55 !important;
+}
+
+#rulesScreen .space-y-3.max-w-2xl {
+  max-width: 850px !important;
+  width: 850px !important;
+}
+
+#rulesScreen .grid.grid-cols-2 {
+  gap: 12px !important;
+}
+
+#rulesScreen .grid.grid-cols-2 > div {
+  min-height: 118px !important;
+  padding: 16px 18px !important;
+  border-radius: 18px !important;
+}
+
+#rulesScreen h3 {
+  font-size: 1.02rem !important;
+  margin-bottom: 10px !important;
+}
+
+#rulesScreen h4 {
+  font-size: 1.28rem !important;
+  line-height: 1.25 !important;
+}
+
+#rulesScreen .grid.grid-cols-2 p {
+  font-size: 0.98rem !important;
+  line-height: 1.58 !important;
+}
+
+#rulesScreen .flex.flex-col.sm\:flex-row {
+  padding-top: 8px !important;
+  gap: 14px !important;
+}
+
+#backToStartBtn,
+#startGameBtn {
+  min-height: 58px !important;
+  padding: 12px 34px !important;
+  border-radius: 999px !important;
+  font-size: 1.12rem !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 100000 !important;
+}
+
+/* ---------- 遊戲頁：三個選項完整呈現 ---------- */
+#gameplayScreen {
+  padding: 18px 44px !important;
+  gap: 10px !important;
+  justify-content: flex-start !important;
+  overflow: hidden !important;
+}
+
+#gameplayScreen > .grid.grid-cols-2.md\:grid-cols-4 {
+  padding: 8px 10px !important;
+  gap: 8px !important;
+  border-radius: 16px !important;
+  flex: 0 0 auto !important;
+}
+
+#gameplayScreen > .grid.grid-cols-2.md\:grid-cols-4 > div {
+  padding: 8px 10px !important;
+  border-radius: 14px !important;
+}
+
+#gameplayScreen .grid.grid-cols-2.md\:grid-cols-4 .text-xs,
+#gameplayScreen .grid.grid-cols-2.md\:grid-cols-4 span {
+  font-size: 0.76rem !important;
+  line-height: 1.2 !important;
+}
+
+#gameplayScreen .grid.grid-cols-2.md\:grid-cols-4 .h-2\.5 {
+  height: 7px !important;
+}
+
+#gameplayScreen > .bg-white\/80.backdrop-blur-md {
+  padding: 12px 16px !important;
+  gap: 14px !important;
+  border-radius: 22px !important;
+  align-items: stretch !important;
+  flex: 0 0 auto !important;
+}
+
+#gameplayScreen .w-full.md\:w-1\/3 {
+  padding: 10px !important;
+}
+
+#gameplayScreen .relative.w-40.h-36 {
+  transform: scale(0.72) !important;
+  transform-origin: center center !important;
+  margin-top: -18px !important;
+  margin-bottom: -22px !important;
+}
+
+#gameplayScreen #visualizer {
+  height: 20px !important;
+  margin-top: 6px !important;
+}
+
+#currentShowName,
+#progressIndicator {
+  font-size: 0.8rem !important;
+  line-height: 1.25 !important;
+}
+
+#gameplayScreen .w-full.md\:w-2\/3 {
+  gap: 8px !important;
+}
+
+#episodeTitle {
+  font-size: 1.22rem !important;
+  line-height: 1.32 !important;
+  margin-bottom: 5px !important;
+}
+
+#episodeDesc {
+  font-size: 0.86rem !important;
+  line-height: 1.45 !important;
+  margin-bottom: 8px !important;
+}
+
+#audioActionPanel {
+  padding: 10px 12px !important;
+  gap: 8px !important;
+}
+
+#audioActionPanel p.text-sm,
+#audioActionPanel .text-sm {
+  font-size: 0.88rem !important;
+}
+
+#audioActionPanel .text-xs,
+#durationHint {
+  font-size: 0.78rem !important;
+  line-height: 1.35 !important;
+}
+
+#playQuestionBtn {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  min-height: 42px !important;
+}
+
+#postPlayControls {
+  padding-top: 8px !important;
+}
+
+#makeDecisionBtn {
+  min-height: 46px !important;
+  padding: 9px 18px !important;
+  font-size: 0.9rem !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 100000 !important;
+}
+
+/* 決策區改成三欄，讓第三個選項直接顯示，不再被下緣裁掉。 */
+#decisionSection {
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 8px !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+}
+
+#decisionSection h4 {
+  font-size: 0.82rem !important;
+  line-height: 1.3 !important;
+  margin: 0 0 6px !important;
+}
+
+#optionsContainer {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#optionsContainer > * {
+  min-height: 0 !important;
+  padding: 12px 12px !important;
+  border-radius: 18px !important;
+  box-sizing: border-box !important;
+}
+
+#optionsContainer h4,
+#optionsContainer .font-bold {
+  font-size: 0.95rem !important;
+  line-height: 1.35 !important;
+  margin-bottom: 5px !important;
+}
+
+#optionsContainer p,
+#optionsContainer blockquote,
+#optionsContainer .text-xs,
+#optionsContainer .text-sm {
+  font-size: 0.78rem !important;
+  line-height: 1.45 !important;
+}
+
+#optionsContainer button {
+  min-height: 42px !important;
+  padding: 8px 14px !important;
+  font-size: 0.82rem !important;
+  line-height: 1.2 !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 100000 !important;
+}
+
+/* 回饋彈窗避免擋住下一步按鈕。 */
+#reminderModal,
+#feedbackModal {
+  z-index: 999998 !important;
+}
+
+#confirmStartGameBtn,
+#nextEpisodeBtn,
+#continueBtn {
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 100000 !important;
+}
+
+@media (max-width: 900px) {
+  #startScreen {
+    padding: 30px 24px 38px !important;
+  }
+
+  #rulesScreen {
+    padding: 28px 24px 34px !important;
+  }
+
+  #rulesScreen .space-y-3.max-w-2xl {
+    width: 100% !important;
+  }
+
+  #optionsContainer {
+    grid-template-columns: 1fr !important;
+    overflow-y: auto !important;
+    max-height: 320px !important;
+  }
+}
+</style>
+<script data-patch="v102-survival-resize-after-layout">
+(function(){
+  function notify(){
+    try {
+      parent.postMessage({ type: 'survival-game-size', height: 980, width: 1080 }, '*');
+    } catch(e) {}
+  }
+  window.addEventListener('load', function(){
+    notify();
+    setTimeout(notify, 80);
+    setTimeout(notify, 240);
+  });
+  document.addEventListener('click', function(){
+    setTimeout(notify, 60);
+    setTimeout(notify, 220);
+  }, true);
+})();
+</script>
+
+
+<style data-patch="v103-survival-layout-refine">
+/* v103: 1) 首頁與錄製須知整體上移約 1 公分；
+   2) 選項恢復原本直式堆疊版；
+   3) 保留上方四大變項與音軌播放區，並讓第三選項可顯示/可點擊。 */
+
+/* --- 首頁與第二頁上移 --- */
+#startScreen,
+#rulesScreen {
+  position: relative !important;
+  transform: translateY(-36px) !important;
+}
+
+/* 保留完整可視，不要讓底部按鈕被切到 */
+#startScreen {
+  padding-top: 18px !important;
+  padding-bottom: 42px !important;
+}
+#rulesScreen {
+  padding-top: 24px !important;
+  padding-bottom: 44px !important;
+}
+
+/* --- 遊戲頁版面 --- */
+#gameplayScreen {
+  padding: 14px 38px 22px !important;
+  gap: 10px !important;
+  align-items: stretch !important;
+}
+
+/* 上方四大變項保留並維持單列 */
+#gameplayScreen > .grid.grid-cols-2.md\:grid-cols-4 {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  flex: 0 0 auto !important;
+}
+
+#gameplayScreen > .bg-white\/80.backdrop-blur-md {
+  flex: 0 0 auto !important;
+}
+
+/* 保留音軌播放區與主卡 */
+#audioActionPanel {
+  padding: 12px 14px !important;
+}
+
+#postPlayControls {
+  padding-top: 8px !important;
+}
+
+/* 進行決策區恢復直式原始樣式 */
+#decisionSection {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  margin-top: 0 !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+#decisionSection h4 {
+  font-size: 0.98rem !important;
+  line-height: 1.35 !important;
+  margin: 2px 0 0 !important;
+}
+
+#optionsContainer {
+  display: flex !important;
+  flex-direction: column !important;
+  grid-template-columns: none !important;
+  gap: 12px !important;
+  width: 100% !important;
+  max-height: 360px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-right: 4px !important;
+  margin: 0 !important;
+  align-content: stretch !important;
+}
+
+#optionsContainer > div {
+  width: 100% !important;
+  min-height: auto !important;
+  padding: 18px 20px !important;
+  border-radius: 22px !important;
+  box-sizing: border-box !important;
+}
+
+#optionsContainer > div > div {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+}
+
+#optionsContainer .space-y-3 {
+  flex: 1 1 auto !important;
+}
+
+#optionsContainer h5 {
+  font-size: 1.05rem !important;
+  line-height: 1.45 !important;
+  margin-bottom: 0 !important;
+}
+
+#optionsContainer .border-l-2 {
+  padding: 10px 0 10px 14px !important;
+  background: rgba(255,255,255,0.3) !important;
+}
+
+#optionsContainer p {
+  font-size: 0.92rem !important;
+  line-height: 1.6 !important;
+}
+
+#optionsContainer .shrink-0 {
+  flex: 0 0 auto !important;
+  align-self: center !important;
+  padding-top: 0 !important;
+}
+
+#optionsContainer .select-opt-btn {
+  min-width: 122px !important;
+  min-height: 54px !important;
+  padding: 12px 18px !important;
+  border-radius: 999px !important;
+  font-size: 0.95rem !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 100000 !important;
+}
+
+/* 滾動條做淡化 */
+#optionsContainer::-webkit-scrollbar {
+  width: 10px !important;
+}
+#optionsContainer::-webkit-scrollbar-thumb {
+  background: rgba(212,104,138,0.38) !important;
+  border-radius: 999px !important;
+}
+#optionsContainer::-webkit-scrollbar-track {
+  background: rgba(212,104,138,0.08) !important;
+  border-radius: 999px !important;
+}
+
+/* 小一點的整體高度，讓音軌區 + 三個選項更容易共存 */
+#gameplayScreen .w-full.md\:w-1\/3 {
+  padding: 8px !important;
+}
+#gameplayScreen .w-full.md\:w-2\/3 {
+  gap: 8px !important;
+}
+#episodeTitle {
+  font-size: 1.16rem !important;
+  line-height: 1.3 !important;
+}
+#episodeDesc {
+  font-size: 0.83rem !important;
+  line-height: 1.48 !important;
+}
+
+/* 讓按鈕與彈窗都可正常點擊 */
+#makeDecisionBtn,
+#playQuestionBtn,
+#nextEpisodeBtn,
+#continueBtn,
+#confirmStartGameBtn,
+.select-opt-btn {
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 100000 !important;
+}
+
+@media (max-width: 900px) {
+  #startScreen,
+  #rulesScreen {
+    transform: translateY(-20px) !important;
+  }
+  #gameplayScreen {
+    padding: 12px 20px 18px !important;
+  }
+  #gameplayScreen > .grid.grid-cols-2.md\:grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  #optionsContainer {
+    max-height: 420px !important;
+  }
+  #optionsContainer > div > div {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  #optionsContainer .shrink-0 {
+    align-self: flex-end !important;
+  }
+}
+</style>
+<script data-patch="v103-survival-layout-refine-js">
+(function(){
+  function notify(){
+    try {
+      parent.postMessage({ type:'survival-game-size', height: Math.max(920, document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0), width: Math.max(980, document.documentElement.scrollWidth) }, '*');
+    } catch(e) {}
+  }
+  window.addEventListener('load', function(){ setTimeout(notify, 60); setTimeout(notify, 220); setTimeout(notify, 700); });
+  window.addEventListener('resize', notify);
+  document.addEventListener('click', function(){ setTimeout(notify, 80); setTimeout(notify, 280); }, true);
+})();
+</script>
+
+
+<style data-patch="v104-survival-options-fill-space-horizontal">
+/* v104：不更動首頁與錄製須知頁；只調整正式遊戲選項頁。
+   目的：保留上方四大變項與音軌播放區，三個選項維持橫式列呈現，並填滿下方留白。 */
+
+#gameplayScreen:not(.hidden) {
+  padding: 14px 38px 18px !important;
+  gap: 10px !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  max-height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  overflow: hidden !important;
+}
+
+/* 四大變項：保留在上方，略壓低高度，讓下方選項有足夠空間 */
+#gameplayScreen > .grid.grid-cols-2.md\:grid-cols-4 {
+  flex: 0 0 auto !important;
+  padding: 8px 10px !important;
+  gap: 8px !important;
+  border-radius: 18px !important;
+}
+#gameplayScreen > .grid.grid-cols-2.md\:grid-cols-4 > div {
+  padding: 8px 10px !important;
+  border-radius: 14px !important;
+}
+#gameplayScreen > .grid.grid-cols-2.md\:grid-cols-4 .text-xs,
+#gameplayScreen > .grid.grid-cols-2.md\:grid-cols-4 span {
+  font-size: 0.76rem !important;
+  line-height: 1.2 !important;
+}
+#gameplayScreen > .grid.grid-cols-2.md\:grid-cols-4 .h-2\.5 {
+  height: 7px !important;
+}
+
+/* 音軌播放處：保留，避免壓到選項 */
+#gameplayScreen > .bg-white\/80.backdrop-blur-md {
+  flex: 0 0 auto !important;
+  padding: 12px 16px !important;
+  gap: 14px !important;
+  border-radius: 22px !important;
+  align-items: stretch !important;
+}
+#gameplayScreen .w-full.md\:w-1\/3 {
+  padding: 8px !important;
+}
+#gameplayScreen .relative.w-40.h-36 {
+  transform: scale(0.72) !important;
+  transform-origin: center center !important;
+  margin-top: -18px !important;
+  margin-bottom: -22px !important;
+}
+#gameplayScreen #visualizer {
+  height: 18px !important;
+  margin-top: 4px !important;
+}
+#episodeTitle {
+  font-size: 1.13rem !important;
+  line-height: 1.28 !important;
+  margin-bottom: 4px !important;
+}
+#episodeDesc {
+  font-size: 0.81rem !important;
+  line-height: 1.42 !important;
+  margin-bottom: 7px !important;
+}
+#audioActionPanel {
+  padding: 10px 12px !important;
+  gap: 8px !important;
+}
+#makeDecisionBtn {
+  min-height: 44px !important;
+  padding: 8px 18px !important;
+  font-size: 0.9rem !important;
+}
+
+/* 選項區：改回橫式「一列一題」；三列平均填滿剩餘空間，消除底部大留白 */
+#decisionSection {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 8px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+#decisionSection h4 {
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+  padding-left: 0 !important;
+  font-size: 0.94rem !important;
+  line-height: 1.25 !important;
+}
+#optionsContainer {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  height: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  grid-template-columns: none !important;
+  gap: 12px !important;
+  overflow: visible !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+#optionsContainer > div {
+  flex: 1 1 0 !important;
+  min-height: 112px !important;
+  width: 100% !important;
+  padding: 16px 18px !important;
+  border-radius: 22px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  display: flex !important;
+  align-items: center !important;
+}
+#optionsContainer > div > div {
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+}
+#optionsContainer .space-y-3 {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+#optionsContainer h5 {
+  font-size: 1.03rem !important;
+  line-height: 1.34 !important;
+  margin: 0 0 6px !important;
+  letter-spacing: 0.05em !important;
+}
+#optionsContainer .border-l-2 {
+  padding: 8px 0 8px 14px !important;
+  background: rgba(255,255,255,0.28) !important;
+}
+#optionsContainer p {
+  font-size: 0.84rem !important;
+  line-height: 1.48 !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+#optionsContainer .shrink-0 {
+  flex: 0 0 auto !important;
+  align-self: center !important;
+  padding-top: 0 !important;
+}
+#optionsContainer .select-opt-btn {
+  min-width: 124px !important;
+  min-height: 52px !important;
+  padding: 12px 18px !important;
+  border-radius: 999px !important;
+  font-size: 0.92rem !important;
+  line-height: 1.15 !important;
+  white-space: nowrap !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 100000 !important;
+}
+
+/* 小螢幕仍保留直式列，但允許滾動，避免文字被壓壞 */
+@media (max-width: 900px) {
+  #gameplayScreen:not(.hidden) {
+    padding: 12px 20px 18px !important;
+  }
+  #optionsContainer {
+    overflow-y: auto !important;
+    max-height: 420px !important;
+  }
+  #optionsContainer > div {
+    flex: 0 0 auto !important;
+  }
+  #optionsContainer > div > div {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  #optionsContainer .shrink-0 {
+    align-self: flex-end !important;
+  }
+}
+</style>
+<script data-patch="v104-score-balance-notify">
+/* v104：切頁後通知外層重算高度，並確保選項按鈕維持可點擊。 */
+(function(){
+  function notify(){
+    try {
+      parent.postMessage({ type:'survival-game-size', height: 980, width: 1080 }, '*');
+    } catch(e) {}
+  }
+  window.addEventListener('load', function(){ setTimeout(notify, 80); setTimeout(notify, 280); });
+  document.addEventListener('click', function(){ setTimeout(notify, 80); setTimeout(notify, 240); }, true);
+})();
+</script>
+
+
+<style data-patch="v105-sticky-top-audio-and-scroll-options">
+/* v105：保留首頁與錄製須知頁不變。
+   調整正式遊戲頁：
+   1) 進入選項前先顯示純音檔播放畫面；
+   2) 進入選項後，四大變項＋音檔播放器固定在上方；
+   3) 三個選項維持橫式列呈現，字體恢復正常大小；
+   4) 若單一畫面無法容納三個選項，允許讀者向下滑動完整閱讀。 */
+
+#gameplayScreen:not(.hidden) {
+  padding: 18px 42px 24px !important;
+  gap: 14px !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  max-height: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  justify-content: flex-start !important;
+  align-items: stretch !important;
+  scroll-behavior: smooth;
+}
+
+#gameplayTopSticky {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  z-index: 5;
+}
+
+/* 只有進入選項之後才固定在上方 */
+#gameplayScreen.decision-mode #gameplayTopSticky {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  padding-top: 2px;
+  padding-bottom: 12px;
+  background: linear-gradient(to bottom,
+    rgba(244,236,240,0.98) 0%,
+    rgba(244,236,240,0.96) 82%,
+    rgba(244,236,240,0) 100%);
+  backdrop-filter: blur(2px);
+}
+
+/* 恢復較自然的尺寸，不再把上方資訊壓得過小 */
+#gameStatsBoard {
+  flex: 0 0 auto !important;
+  padding: 10px 12px !important;
+  gap: 10px !important;
+  border-radius: 18px !important;
+}
+#gameStatsBoard > div {
+  padding: 10px 12px !important;
+  border-radius: 14px !important;
+}
+#gameStatsBoard .text-xs,
+#gameStatsBoard span {
+  font-size: 0.88rem !important;
+  line-height: 1.25 !important;
+}
+#gameStatsBoard .h-2\.5 {
+  height: 8px !important;
+}
+
+#gameMainBoard {
+  flex: 0 0 auto !important;
+  padding: 18px 20px !important;
+  gap: 18px !important;
+  border-radius: 24px !important;
+  align-items: stretch !important;
+}
+#gameMainBoard .w-full.md\:w-1\/3 {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+}
+#gameMainBoard .relative.w-40.h-36 {
+  transform: none !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+#episodeTitle {
+  font-size: 1.55rem !important;
+  line-height: 1.28 !important;
+  margin-bottom: 6px !important;
+}
+#episodeDesc {
+  font-size: 1rem !important;
+  line-height: 1.7 !important;
+  margin-bottom: 10px !important;
+}
+#audioActionPanel {
+  padding: 14px 16px !important;
+  gap: 10px !important;
+}
+#makeDecisionBtn {
+  min-height: 52px !important;
+  padding: 12px 20px !important;
+  font-size: 1rem !important;
+}
+
+#decisionSection.hidden {
+  display: none !important;
+}
+#decisionSection {
+  flex: 0 0 auto !important;
+  min-height: auto !important;
+  margin: 0 !important;
+  padding: 0 0 8px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  overflow: visible !important;
+}
+#decisionSection h4 {
+  margin: 0 !important;
+  padding-left: 4px !important;
+  font-size: 1rem !important;
+  line-height: 1.35 !important;
+}
+
+#optionsContainer {
+  display: flex !important;
+  flex-direction: column !important;
+  grid-template-columns: none !important;
+  gap: 16px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: visible !important;
+  max-height: none !important;
+  height: auto !important;
+}
+#optionsContainer > div {
+  width: 100% !important;
+  padding: 22px 24px !important;
+  border-radius: 24px !important;
+  box-sizing: border-box !important;
+  overflow: visible !important;
+  display: block !important;
+  min-height: 172px !important;
+}
+#optionsContainer > div > div {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 22px !important;
+}
+#optionsContainer .space-y-3 {
+  min-width: 0 !important;
+}
+#optionsContainer h5 {
+  font-size: 1.24rem !important;
+  line-height: 1.45 !important;
+  margin: 0 0 10px !important;
+  letter-spacing: 0.02em !important;
+}
+#optionsContainer .border-l-2 {
+  padding: 12px 0 12px 14px !important;
+  background: rgba(255,255,255,0.34) !important;
+}
+#optionsContainer p,
+#optionsContainer blockquote,
+#optionsContainer .text-xs,
+#optionsContainer .text-sm {
+  font-size: 1rem !important;
+  line-height: 1.75 !important;
+  display: block !important;
+  -webkit-line-clamp: unset !important;
+  -webkit-box-orient: initial !important;
+  overflow: visible !important;
+}
+#optionsContainer .shrink-0 {
+  align-self: center !important;
+  padding-top: 0 !important;
+}
+#optionsContainer .select-opt-btn {
+  min-width: 142px !important;
+  min-height: 58px !important;
+  padding: 14px 20px !important;
+  border-radius: 999px !important;
+  font-size: 1rem !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 1000 !important;
+  box-shadow: 0 12px 24px rgba(156,132,112,0.18) !important;
+}
+
+/* 窄螢幕時改成可閱讀優先，仍保留每題同樣流程，並允許滑動 */
+@media (max-width: 980px) {
+  #gameplayScreen:not(.hidden) {
+    padding: 16px 20px 20px !important;
+  }
+  #gameMainBoard {
+    padding: 16px !important;
+  }
+  #gameMainBoard .bg-\[\#F5EDE4\] {
+    padding: 12px !important;
+  }
+  #episodeTitle {
+    font-size: 1.34rem !important;
+  }
+  #episodeDesc {
+    font-size: 0.96rem !important;
+  }
+  #optionsContainer > div {
+    min-height: auto !important;
+  }
+  #optionsContainer > div > div {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  #optionsContainer .shrink-0 {
+    justify-self: end !important;
+  }
+}
+</style>
+<script data-patch="v105-top-sticky-scroll-behavior">
+(function(){
+  function notifyMore(){
+    try {
+      if (typeof notifyParent === 'function') {
+        notifyParent();
+        setTimeout(notifyParent, 120);
+        setTimeout(notifyParent, 320);
+      } else {
+        parent.postMessage({ type:'survival-game-size', height: document.body.scrollHeight, width: document.body.scrollWidth }, '*');
+      }
+    } catch(e) {}
+  }
+  window.addEventListener('load', function(){ setTimeout(notifyMore, 80); setTimeout(notifyMore, 260); });
+  document.addEventListener('click', function(){ setTimeout(notifyMore, 80); setTimeout(notifyMore, 220); }, true);
+})();
+</script>
+
+
+<style data-patch="v106-third-option-complete-and-audio-center">
+/* v106：只修兩件事：
+   1. 單獨播放音檔畫面置中呈現；
+   2. 選項頁滑到底時第三個選項完整露出。 */
+
+/* 未進入選項前，讓四大變項＋音檔播放卡在畫面中間，不再貼在上方。 */
+#gameplayScreen:not(.hidden):not(.decision-mode) {
+  justify-content: center !important;
+  overflow: hidden !important;
+}
+
+#gameplayScreen:not(.hidden):not(.decision-mode) #gameplayTopSticky {
+  margin-top: auto !important;
+  margin-bottom: auto !important;
+  transform: translateY(-8px) !important;
+}
+
+/* 進入選項後恢復原本固定上方設定。 */
+#gameplayScreen.decision-mode {
+  justify-content: flex-start !important;
+  overflow-y: auto !important;
+  scroll-padding-bottom: 130px !important;
+}
+
+#gameplayScreen.decision-mode #gameplayTopSticky {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  transform: none !important;
+}
+
+/* 讓第三個選項滑到底時不會被外框底部裁切。 */
+#gameplayScreen.decision-mode #decisionSection {
+  padding-bottom: 130px !important;
+}
+
+#gameplayScreen.decision-mode #optionsContainer {
+  padding-bottom: 130px !important;
+}
+
+#gameplayScreen.decision-mode #optionsContainer > div:last-child {
+  margin-bottom: 0 !important;
+}
+</style>
+<script data-patch="v106-third-option-complete-and-audio-center-js">
+(function(){
+  function fixScrollRoom(){
+    var screen = document.getElementById('gameplayScreen');
+    if (!screen) return;
+    if (screen.classList.contains('decision-mode')) {
+      screen.style.scrollPaddingBottom = '130px';
+    }
+    try {
+      if (typeof notifyParent === 'function') {
+        notifyParent();
+        setTimeout(notifyParent, 120);
+        setTimeout(notifyParent, 360);
+      }
+    } catch(e) {}
+  }
+
+  window.addEventListener('load', function(){
+    setTimeout(fixScrollRoom, 80);
+    setTimeout(fixScrollRoom, 300);
+  });
+
+  document.addEventListener('click', function(){
+    setTimeout(fixScrollRoom, 80);
+    setTimeout(fixScrollRoom, 280);
+  }, true);
 })();
 </script>
 
