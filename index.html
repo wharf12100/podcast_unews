@@ -34890,3 +34890,160 @@ html body #opening-cover-page .opening-cover-image {
   }, true);
 })();
 </script>
+
+
+<style data-patch="v158-existential-tooltip-body-layer">
+/* v158：把「存在性因子」註解獨立掛到 body 最上層顯示，避免被「其他專家怎麼看？」或專家小卡區塊壓住。 */
+html body .tooltip-term.has-rich-tooltip.tooltip-term--existential {
+  position: relative !important;
+  z-index: 2147483646 !important;
+  isolation: isolate !important;
+}
+
+/* 原本留在文字裡的註解卡先隱藏，避免同時出現兩張；實際顯示由 body 最上層的浮動卡負責。 */
+html body .tooltip-term.has-rich-tooltip.tooltip-term--existential > .tooltip-card {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  display: none !important;
+}
+
+html body .existential-floating-tooltip-v158 {
+  position: fixed !important;
+  left: 50% !important;
+  top: 50% !important;
+  width: min(420px, calc(100vw - 36px)) !important;
+  padding: 16px 18px !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(194,77,120,0.16) !important;
+  background: #f8eef1 !important;
+  color: rgba(58,26,46,0.92) !important;
+  font-family: var(--font-serif, "Noto Serif TC", serif) !important;
+  font-size: clamp(15px, 1.02vw, 18px) !important;
+  font-weight: 400 !important;
+  line-height: 1.85 !important;
+  letter-spacing: 0.02em !important;
+  text-align: left !important;
+  text-indent: 0 !important;
+  white-space: normal !important;
+  box-shadow: 0 14px 34px rgba(44,20,38,0.24) !important;
+  transform: translate(-50%, 8px) !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  z-index: 2147483647 !important;
+  transition: opacity .14s ease, transform .14s ease !important;
+  box-sizing: border-box !important;
+}
+
+html body .existential-floating-tooltip-v158.is-visible {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translate(-50%, 0) !important;
+}
+
+html body .existential-floating-tooltip-v158 .tooltip-card-term {
+  color: var(--crimson, #c24d78) !important;
+  font-weight: 700 !important;
+  border-bottom: 1px solid rgba(194,77,120,0.35) !important;
+  padding-bottom: 1px !important;
+}
+
+/* 讓「其他專家怎麼看？」與專家卡區塊明確退到存在性因子註解後方。 */
+html body .expert-panel,
+html body .expert-panel-title,
+html body .floating-expert-title,
+html body #pz-expert-inline-v224,
+html body #pz-expert-inline-v224 .v224-title-row,
+html body #pz-expert-inline-v224 .v224-title,
+html body #pz-expert-inline-v224 .v224-dock,
+html body #pz-expert-inline-v224 .v224-shelf {
+  z-index: 1 !important;
+}
+</style>
+<script data-patch="v158-existential-tooltip-body-layer-js">
+(function(){
+  function initExistentialFloatingTooltip(){
+    var terms = Array.prototype.slice.call(document.querySelectorAll('.tooltip-term.has-rich-tooltip.tooltip-term--existential'));
+    if (!terms.length) return;
+
+    var floating = document.querySelector('.existential-floating-tooltip-v158');
+    if (!floating) {
+      floating = document.createElement('div');
+      floating.className = 'existential-floating-tooltip-v158';
+      floating.setAttribute('role', 'note');
+      floating.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(floating);
+    }
+
+    var activeTerm = null;
+    var hideTimer = null;
+
+    function fill(term){
+      var card = term.querySelector('.tooltip-card');
+      if (!card) return false;
+      floating.innerHTML = card.innerHTML;
+      return true;
+    }
+
+    function place(term){
+      if (!term) return;
+      var rect = term.getBoundingClientRect();
+      var fw = floating.offsetWidth || Math.min(420, window.innerWidth - 36);
+      var fh = floating.offsetHeight || 120;
+      var gap = 12;
+      var left = rect.left + rect.width / 2;
+      var top = rect.top - fh - gap;
+
+      if (top < 14) top = rect.bottom + gap;
+      var half = fw / 2;
+      if (left - half < 18) left = half + 18;
+      if (left + half > window.innerWidth - 18) left = window.innerWidth - half - 18;
+      if (top + fh > window.innerHeight - 14) top = Math.max(14, window.innerHeight - fh - 14);
+
+      floating.style.setProperty('left', left + 'px', 'important');
+      floating.style.setProperty('top', top + 'px', 'important');
+    }
+
+    function show(term){
+      window.clearTimeout(hideTimer);
+      activeTerm = term;
+      if (!fill(term)) return;
+      floating.setAttribute('aria-hidden', 'false');
+      floating.classList.add('is-visible');
+      place(term);
+      requestAnimationFrame(function(){ place(term); });
+      setTimeout(function(){ place(term); }, 60);
+    }
+
+    function hideSoon(){
+      window.clearTimeout(hideTimer);
+      hideTimer = window.setTimeout(function(){
+        activeTerm = null;
+        floating.classList.remove('is-visible');
+        floating.setAttribute('aria-hidden', 'true');
+      }, 80);
+    }
+
+    terms.forEach(function(term){
+      if (term.__existentialTooltipV158) return;
+      term.__existentialTooltipV158 = true;
+      term.addEventListener('mouseenter', function(){ show(term); });
+      term.addEventListener('focus', function(){ show(term); }, true);
+      term.addEventListener('mouseleave', hideSoon);
+      term.addEventListener('blur', hideSoon, true);
+      term.addEventListener('touchstart', function(){ show(term); }, {passive:true});
+    });
+
+    window.addEventListener('scroll', function(){ if (activeTerm) place(activeTerm); }, true);
+    window.addEventListener('resize', function(){ if (activeTerm) place(activeTerm); }, {passive:true});
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initExistentialFloatingTooltip, {once:true});
+  } else {
+    initExistentialFloatingTooltip();
+  }
+  window.addEventListener('load', initExistentialFloatingTooltip, {once:true});
+})();
+</script>
