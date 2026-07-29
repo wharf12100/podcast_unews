@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Podcast 專題頁面｜紙卡版</title>
+
+  <style>
+    /* =========================================================
+       基本變數：沿用你原本網站的字體與色彩邏輯
+       ========================================================= */
+    :root {
+      --bg: #f0e8d6;
+      --bg-soft: #e8ddc8;
+      --bg-card: #f7f1e4;
+      --ink: #1c130a;
+      --ink-dim: rgba(28, 19, 10, 0.58);
+      --ink-ghost: rgba(28, 19, 10, 0.28);
+      --gold: #9a6e20;
+      --gold-line: rgba(154, 110, 32, 0.4);
+      --crimson: #7a2520;
+      --steel: #3d5a6e;
+      --line: rgba(28, 19, 10, 0.16);
+      --line-strong: rgba(28, 19, 10, 0.28);
+      --content-width: 700px;
+
+      --font-serif: "Noto Serif TC", "Songti TC", "PMingLiU", "Georgia", serif;
+      --font-sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      --font-display: "Noto Serif TC", "Georgia", serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+    }
+
+    body {
+      font-family: var(--font-serif);
+      color: var(--ink);
+      line-height: 1.9;
+      letter-spacing: 0.025em;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 18% 16%, rgba(255, 255, 255, 0.48), transparent 32%),
+        radial-gradient(circle at 74% 72%, rgba(212, 104, 138, 0.16), transparent 38%),
+        repeating-linear-gradient(
+          18deg,
+          rgba(28, 19, 10, 0.018) 0,
+          rgba(28, 19, 10, 0.018) 1px,
+          transparent 1px,
+          transparent 8px
+        ),
+        #f9e6ec;
+    }
+
+    /* =========================================================
+       單頁 section
+       ========================================================= */
+    .article-section {
+      position: relative;
+      min-height: 100vh;
+      width: 100%;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      padding: 72px 32px;
+    }
+
+    .quote-paper-page {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stage-content {
+      position: relative;
+      z-index: 2;
+      width: min(var(--content-width), calc(100vw - 44px));
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .article-copy {
+      margin: 0 auto;
+      color: rgba(28, 19, 10, 0.72);
+      font-family: var(--font-serif);
+      font-size: clamp(1rem, 1.25vw, 1.18rem);
+      font-weight: 400;
+      line-height: 2.15;
+      letter-spacing: 0.08em;
+      text-align: justify;
+      text-justify: inter-ideograph;
+    }
+
+    .article-copy::first-letter {
+      float: left;
+      font-family: var(--font-display);
+      font-size: 4.35em;
+      line-height: 0.78;
+      margin: 0.08em 0.16em 0 0;
+      color: rgba(194, 77, 120, 0.9);
+      font-weight: 700;
+    }
+
+    /* =========================================================
+       音波裝飾
+       ========================================================= */
+    .soundwave {
+      position: relative;
+      z-index: 2;
+      width: min(620px, 78vw);
+      height: 54px;
+      margin: 48px auto 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      opacity: 0.45;
+    }
+
+    .soundwave span {
+      display: block;
+      width: 3px;
+      height: var(--h);
+      background: rgba(194, 77, 120, 0.58);
+      border-radius: 999px;
+      box-shadow: 0 0 10px rgba(194, 77, 120, 0.12);
+    }
+
+    /* =========================================================
+       插畫風紙卡裝飾
+       左上角、右下角各兩張交叉疊放
+       ========================================================= */
+
+    .paper-card-corner {
+      position: absolute;
+      width: 250px;
+      height: 176px;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .paper-card-corner--tl {
+      top: 54px;
+      left: 58px;
+    }
+
+    .paper-card-corner--br {
+      right: 62px;
+      bottom: 56px;
+    }
+
+    .paper-card {
+      position: absolute;
+      display: block;
+      width: 170px;
+      height: 112px;
+
+      background:
+        radial-gradient(circle at 22% 24%, rgba(255, 255, 255, 0.45) 0 2px, transparent 3px),
+        radial-gradient(circle at 72% 64%, rgba(28, 19, 10, 0.04) 0 2px, transparent 3px),
+        radial-gradient(circle at 38% 82%, rgba(154, 110, 32, 0.04) 0 2px, transparent 3px),
+        repeating-linear-gradient(
+          10deg,
+          rgba(28, 19, 10, 0.014) 0,
+          rgba(28, 19, 10, 0.014) 1px,
+          transparent 1px,
+          transparent 8px
+        ),
+        linear-gradient(180deg, #f6f1e8 0%, #ebe4d8 100%);
+
+      border: 1px solid rgba(28, 19, 10, 0.08);
+
+      box-shadow:
+        0 12px 26px rgba(28, 19, 10, 0.11),
+        0 1px 0 rgba(255, 255, 255, 0.55) inset;
+
+      opacity: 0.94;
+
+      clip-path: polygon(
+        1.5% 8%, 7% 4%, 14% 6%, 22% 3%, 30% 6%, 39% 4%, 48% 5%,
+        57% 3%, 67% 6%, 77% 4%, 87% 5%, 96% 3%,
+        98.5% 92%, 92% 96%, 84% 94%, 74% 97%, 63% 94%, 53% 97%,
+        43% 95%, 33% 97%, 23% 94%, 13% 97%, 3% 93%
+      );
+    }
+
+    .paper-card::before,
+    .paper-card::after {
+      content: "";
+      position: absolute;
+      pointer-events: none;
+    }
+
+    .paper-card::before {
+      inset: 13px;
+      border: 1.2px solid rgba(154, 110, 32, 0.22);
+      border-radius: 2px;
+      transform: rotate(-1.2deg);
+    }
+
+    .paper-card::after {
+      left: 22px;
+      right: 22px;
+      top: 24px;
+      bottom: 24px;
+      background:
+        linear-gradient(rgba(122, 37, 32, 0.15), rgba(122, 37, 32, 0.15)) left 0 top 10px / 62% 1.2px no-repeat,
+        linear-gradient(rgba(122, 37, 32, 0.11), rgba(122, 37, 32, 0.11)) left 0 top 31px / 78% 1.2px no-repeat,
+        linear-gradient(rgba(122, 37, 32, 0.10), rgba(122, 37, 32, 0.10)) left 0 top 52px / 54% 1.2px no-repeat,
+        radial-gradient(circle at 88% 28%, rgba(122, 37, 32, 0.14) 0 10px, transparent 11px),
+        radial-gradient(circle at 88% 28%, transparent 0 7px, rgba(122, 37, 32, 0.14) 7.5px 8.5px, transparent 9px);
+      opacity: 0.9;
+    }
+
+    .paper-card--b {
+      background:
+        radial-gradient(circle at 18% 26%, rgba(255, 255, 255, 0.38) 0 2px, transparent 3px),
+        radial-gradient(circle at 76% 70%, rgba(28, 19, 10, 0.035) 0 2px, transparent 3px),
+        repeating-linear-gradient(
+          -7deg,
+          rgba(28, 19, 10, 0.014) 0,
+          rgba(28, 19, 10, 0.014) 1px,
+          transparent 1px,
+          transparent 7px
+        ),
+        linear-gradient(180deg, #f2eadc 0%, #e5d8c4 100%);
+    }
+
+    .paper-card-corner--tl .paper-card--a {
+      top: 0;
+      left: 0;
+      transform: rotate(-11deg);
+    }
+
+    .paper-card-corner--tl .paper-card--b {
+      top: 24px;
+      left: 66px;
+      transform: rotate(9deg);
+    }
+
+    .paper-card-corner--br .paper-card--a {
+      right: 66px;
+      bottom: 22px;
+      transform: rotate(-8deg);
+    }
+
+    .paper-card-corner--br .paper-card--b {
+      right: 0;
+      bottom: 0;
+      transform: rotate(12deg);
+    }
+
+    /* =========================================================
+       響應式
+       ========================================================= */
+    @media (max-width: 1024px) {
+      .paper-card-corner {
+        width: 190px;
+        height: 132px;
+      }
+
+      .paper-card {
+        width: 130px;
+        height: 86px;
+      }
+
+      .paper-card-corner--tl {
+        top: 32px;
+        left: 28px;
+      }
+
+      .paper-card-corner--br {
+        right: 30px;
+        bottom: 30px;
+      }
+
+      .paper-card-corner--tl .paper-card--b {
+        top: 16px;
+        left: 44px;
+      }
+
+      .paper-card-corner--br .paper-card--a {
+        right: 44px;
+        bottom: 16px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .article-section {
+        padding: 74px 22px;
+      }
+
+      .stage-content {
+        width: min(92vw, var(--content-width));
+      }
+
+      .article-copy {
+        font-size: 0.96rem;
+        line-height: 2;
+        letter-spacing: 0.055em;
+      }
+
+      .article-copy::first-letter {
+        font-size: 3.7em;
+      }
+
+      .paper-card-corner {
+        opacity: 0.62;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .paper-card-corner {
+        width: 126px;
+        height: 92px;
+        opacity: 0.55;
+      }
+
+      .paper-card {
+        width: 88px;
+        height: 60px;
+      }
+
+      .paper-card-corner--tl {
+        top: 18px;
+        left: 10px;
+      }
+
+      .paper-card-corner--br {
+        right: 12px;
+        bottom: 18px;
+      }
+
+      .paper-card-corner--tl .paper-card--b {
+        top: 10px;
+        left: 28px;
+      }
+
+      .paper-card-corner--br .paper-card--a {
+        right: 28px;
+        bottom: 10px;
+      }
+
+      .paper-card::before {
+        inset: 8px;
+      }
+
+      .paper-card::after {
+        left: 12px;
+        right: 12px;
+        top: 16px;
+        bottom: 16px;
+      }
+
+      .soundwave {
+        width: 82vw;
+        gap: 5px;
+        margin-top: 38px;
+      }
+
+      .soundwave span {
+        width: 2px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <section class="article-section quote-paper-page">
+
+    <!-- 左上角交叉疊放紙卡 -->
+    <div class="paper-card-corner paper-card-corner--tl" aria-hidden="true">
+      <span class="paper-card paper-card--a"></span>
+      <span class="paper-card paper-card--b"></span>
+    </div>
+
+    <!-- 右下角交叉疊放紙卡 -->
+    <div class="paper-card-corner paper-card-corner--br" aria-hidden="true">
+      <span class="paper-card paper-card--a"></span>
+      <span class="paper-card paper-card--b"></span>
+    </div>
+
+    <div class="stage-content">
+      <p class="article-copy">
+        似乎我的每個感受那些主持人都懂。」戴上耳機，亨利（化名）彷彿打開一扇通往空中的大門，耳機內悠悠傳來 Podcast 節目主持人閒話日常與笑聲，「就像老朋友在跟我聊天。」這股熟悉感，填補他一日裡獨自感到疲憊的時刻。
+      </p>
+
+      <div class="soundwave" aria-hidden="true">
+        <span style="--h: 8px;"></span>
+        <span style="--h: 10px;"></span>
+        <span style="--h: 18px;"></span>
+        <span style="--h: 36px;"></span>
+        <span style="--h: 22px;"></span>
+        <span style="--h: 30px;"></span>
+        <span style="--h: 38px;"></span>
+        <span style="--h: 24px;"></span>
+        <span style="--h: 42px;"></span>
+        <span style="--h: 28px;"></span>
+        <span style="--h: 34px;"></span>
+        <span style="--h: 20px;"></span>
+        <span style="--h: 30px;"></span>
+        <span style="--h: 26px;"></span>
+        <span style="--h: 14px;"></span>
+        <span style="--h: 38px;"></span>
+        <span style="--h: 24px;"></span>
+        <span style="--h: 42px;"></span>
+        <span style="--h: 16px;"></span>
+        <span style="--h: 28px;"></span>
+        <span style="--h: 20px;"></span>
+        <span style="--h: 14px;"></span>
+        <span style="--h: 22px;"></span>
+        <span style="--h: 26px;"></span>
+        <span style="--h: 30px;"></span>
+        <span style="--h: 38px;"></span>
+        <span style="--h: 26px;"></span>
+        <span style="--h: 16px;"></span>
+        <span style="--h: 40px;"></span>
+        <span style="--h: 58px;"></span>
+        <span style="--h: 16px;"></span>
+        <span style="--h: 22px;"></span>
+        <span style="--h: 44px;"></span>
+        <span style="--h: 36px;"></span>
+        <span style="--h: 26px;"></span>
+        <span style="--h: 18px;"></span>
+        <span style="--h: 34px;"></span>
+        <span style="--h: 46px;"></span>
+        <span style="--h: 36px;"></span>
+        <span style="--h: 28px;"></span>
+        <span style="--h: 22px;"></span>
+        <span style="--h: 12px;"></span>
+        <span style="--h: 70px;"></span>
+        <span style="--h: 18px;"></span>
+        <span style="--h: 36px;"></span>
+        <span style="--h: 28px;"></span>
+        <span style="--h: 16px;"></span>
+        <span style="--h: 54px;"></span>
+        <span style="--h: 78px;"></span>
+        <span style="--h: 34px;"></span>
+        <span style="--h: 18px;"></span>
+        <span style="--h: 10px;"></span>
+      </div>
+    </div>
+  </section>
+</body>
+</html>
